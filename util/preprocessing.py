@@ -218,9 +218,59 @@ def addCasingInformation(sentences):
         for tokenIdx in range(len(sentences[sentenceIdx]['tokens'])):
             token = sentences[sentenceIdx]['tokens'][tokenIdx]
             sentences[sentenceIdx]['casing'].append(getCasing(token))
+
+def addIsNameInformation(sentences):
+    """Adds information on whether a word is included or not in word dictionary"""
+    for sentenceIdx in range(len(sentences)):
+        sentences[sentenceIdx]['is_name'] = []
+        for tokenIdx in range(len(sentences[sentenceIdx]['tokens'])):
+            token = sentences[sentenceIdx]['tokens'][tokenIdx]
+            sentences[sentenceIdx]['is_name'].append(getCasing(token))
        
-       
-def getCasing(word):   
+
+def getIsName(keyword_processor, word):
+    if keyword_processor.get_keyword(word):
+        return 1
+    else:
+        return 0
+
+
+def get_names_feature(corpus_df, min_char=3):
+    """
+    This feature receives a CoNLL corpus and adds a name column indicating if this
+    :return:
+    """
+    from flashtext import KeywordProcessor
+    import pandas as pd
+
+    def load_names(names_path, min_freq=1):
+        df_names = pd.read_csv(names_path)
+        if min_freq:
+            df_names = df_names[df_names["sum"] > min_freq]
+        names = df_names.prenom.dropna().values
+        freqs = df_names["sum"].dropna().values
+        dict_names = dict(zip(names, freqs))
+        return dict_names
+
+    NAMES_PATH = "./resources/names/names_last_names_FR.csv"
+    keyword_processor = KeywordProcessor()
+    keyword_processor.add_keywords_from_list(list(load_names(NAMES_PATH).keys()))
+    is_name = lambda token: 1 if keyword_processor.get_keyword(token) else 0
+
+    # corpus_df.dropna()["is_name"] = 0
+
+    corpus_df.loc[corpus_df.dropna().index, "is_name"] = 0
+    corpus_df.loc[corpus_df[0].str.len() > min_char, "is_name"] = corpus_df.loc[corpus_df[0].str.len() > min_char, 0].apply(is_name)
+    # corpus_df.is_name = corpus_df.is_name.replace(np.nan, '', regex=True)
+    # Put the tag column as the last col
+    corpus_df.loc[corpus_df.dropna().index, "is_name"] = pd.to_numeric(corpus_df.loc[corpus_df.dropna().index, "is_name"], downcast="integer")
+    corpus_df = corpus_df[[0, "is_name", 1]].replace(np.nan, '', regex=True)
+    # corpus_df.applymap(str)
+    return corpus_df
+
+
+
+def getCasing(word):
     """Returns the casing for a word"""
     casing = 'other'
     
