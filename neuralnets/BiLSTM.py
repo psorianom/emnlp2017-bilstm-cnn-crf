@@ -22,7 +22,7 @@ import random
 import logging
 
 from .keraslayers.ChainCRF import ChainCRF
-K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)))
+K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=10, inter_op_parallelism_threads=10)))
 
 
 
@@ -33,7 +33,7 @@ class BiLSTM:
         self.models = None
         self.modelSavePath = None
         self.resultsSavePath = None
-
+        self.current_epoch = None
 
         # Hyperparameters for the network
         defaultParams = {'dropout': (0.5,0.5), 'classifier': ['Softmax'], 'LSTM-Size': (100,), 'customClassifier': {},
@@ -389,7 +389,7 @@ class BiLSTM:
         for epoch in range(epochs):      
             sys.stdout.flush()           
             logging.info("\n--------- Epoch %d -----------" % (epoch+1))
-            
+            self.current_epoch = epoch
             start_time = time.time() 
             self.trainModel()
             time_diff = time.time() - start_time
@@ -498,7 +498,7 @@ class BiLSTM:
         dev_pre, dev_rec, dev_f1 = self.computeF1(modelName, devMatrix)
         logging.info("Dev-Data: Prec: %.3f, Rec: %.3f, F1: %.4f" % (dev_pre, dev_rec, dev_f1))
         
-        test_pre, test_rec, test_f1 = self.computeF1(modelName, testMatrix)
+        test_pre, test_rec, test_f1 = self.computeF1(modelName, testMatrix, save_predictions=True)
         logging.info("Test-Data: Prec: %.3f, Rec: %.3f, F1: %.4f" % (test_pre, test_rec, test_f1))
         
         return dev_f1, test_f1
@@ -515,7 +515,7 @@ class BiLSTM:
 
 
 
-    def computeF1(self, modelName, sentences):
+    def computeF1(self, modelName, sentences, save_predictions=False):
         labelKey = self.labelKeys[modelName]
         model = self.models[modelName]
         idx2Label = self.idx2Labels[modelName]
@@ -529,7 +529,8 @@ class BiLSTM:
         pre, rec, f1, label_correct, label_pred = BIOF1Validation.compute_f1(predLabels, correctLabels, idx2Label, 'O', encodingScheme)
         pre_b, rec_b, f1_b, label_correct, label_pred = BIOF1Validation.compute_f1(predLabels, correctLabels, idx2Label, 'B', encodingScheme)
 
-        self.save_pred_true(sentences, label_pred, label_correct, "results_pred_true.txt")
+        if save_predictions:
+            self.save_pred_true(sentences, label_pred, label_correct, "results_pred_true.txt")
 
         if f1_b > f1:
             logging.debug("Setting wrong tags to B- improves from %.4f to %.4f" % (f1, f1_b))
@@ -584,10 +585,9 @@ class BiLSTM:
             
             taskID += 1
 
-    @staticmethod
-    def save_pred_true(sentences, label_pred, label_correct, file_name="results_pred_true.txt"):
+    def save_pred_true(self, sentences, label_pred, label_correct, file_name="results_pred_true.txt"):
         assert(len(sentences) == len(label_pred))
-        with open("./results/{}".format(file_name), "w") as filo:
+        with open("./results/epoch_{0}_{1}".format(self.current_epoch + 1, file_name), "w") as filo:
             for i, (correct_phrase, pred_phrase) in enumerate(zip(label_correct, label_pred)):
                 for j, correct_tag in enumerate(correct_phrase):
                     filo.write("{0} {1} {2}\n".format(sentences[i]["raw_tokens"][j], correct_tag, pred_phrase[j]))

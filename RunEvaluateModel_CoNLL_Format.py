@@ -16,7 +16,8 @@ if len(sys.argv) < 3:
 
 modelPath = sys.argv[1]
 inputPath = sys.argv[2]
-inputColumns = {0: "tokens", 1: "NER_BIO"}
+# inputColumns = {0: "tokens", 2: "NER_BIO"}
+inputColumns = {0: "tokens", 1: "is_name", 2: "NER_BIO"}
 
 
 # :: Prepare the input ::
@@ -36,13 +37,20 @@ tags = lstmModel.tagSentences(dataMatrix)
 
 
 # :: Output to stdout ::
+all_sentences_preds = []
 for sentenceIdx in range(len(sentences)):
     tokens = sentences[sentenceIdx]['tokens']
-    correct_tag = sentences[sentenceIdx]['NER_IOB']
+    correct_tag = sentences[sentenceIdx]['NER_BIO']
     for tokenIdx in range(len(tokens)):
         tokenTags = []
         for modelName in sorted(tags.keys()):
             tokenTags.append(correct_tag[tokenIdx])  # Predicted tag
             tokenTags.append(tags[modelName][sentenceIdx][tokenIdx])  # Correct tag
-        print("%s\t%s" % (tokens[tokenIdx], "\t".join(tokenTags)))
+        string_temp = "%s %s" % (tokens[tokenIdx], " ".join(tokenTags))
+        all_sentences_preds.append(string_temp)
+        print(string_temp)
+    all_sentences_preds.append(" ")
     print("")
+
+# from util.conlleval import evaluate, report
+# report(evaluate(all_sentences_preds))

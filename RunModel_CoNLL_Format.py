@@ -16,7 +16,7 @@ if len(sys.argv) < 3:
 
 modelPath = sys.argv[1]
 inputPath = sys.argv[2]
-inputColumns = {0: "tokens"}
+inputColumns = {0: "tokens", 1:"is_name"}
 
 
 # :: Prepare the input ::
