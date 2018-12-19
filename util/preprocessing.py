@@ -5,19 +5,23 @@ import gzip
 import os.path
 import nltk
 import logging
+
 from nltk import FreqDist
 
 from .WordEmbeddings import wordNormalize
 from .CoNLL import readCoNLL
 
 import sys
+
 if (sys.version_info > (3, 0)):
     import pickle as pkl
-else: #Python 2.7 imports
+else:  # Python 2.7 imports
     import cPickle as pkl
     from io import open
 
-def perpareDataset(embeddingsPath, datasets, frequencyThresholdUnknownTokens=50, reducePretrainedEmbeddings=False, valTransformations=None, padOneTokenSentence=True):
+
+def perpareDataset(embeddingsPath, datasets, frequencyThresholdUnknownTokens=50, reducePretrainedEmbeddings=False,
+                   valTransformations=None, padOneTokenSentence=True):
     """
     Reads in the pre-trained embeddings (in text format) from embeddingsPath and prepares those to be used with the LSTM network.
     Unknown words in the trainDataPath-file are added, if they appear at least frequencyThresholdUnknownTokens times
@@ -39,8 +43,9 @@ def perpareDataset(embeddingsPath, datasets, frequencyThresholdUnknownTokens=50,
         return outputPath
 
     casing2Idx = getCasingVocab()
-    embeddings, word2Idx = readEmbeddings(embeddingsPath, datasets, frequencyThresholdUnknownTokens, reducePretrainedEmbeddings)
-    
+    embeddings, word2Idx = readEmbeddings(embeddingsPath, datasets, frequencyThresholdUnknownTokens,
+                                          reducePretrainedEmbeddings)
+
     mappings = {'tokens': word2Idx, 'casing': casing2Idx}
     pklObjects = {'embeddings': embeddings, 'mappings': mappings, 'datasets': datasets, 'data': {}}
 
@@ -48,21 +53,21 @@ def perpareDataset(embeddingsPath, datasets, frequencyThresholdUnknownTokens=50,
         datasetColumns = dataset['columns']
         commentSymbol = dataset['commentSymbol']
 
-        trainData = 'data/%s/train.txt' % datasetName 
-        devData = 'data/%s/dev.txt' % datasetName 
-        testData = 'data/%s/test.txt' % datasetName 
+        trainData = 'data/%s/train.txt' % datasetName
+        devData = 'data/%s/dev.txt' % datasetName
+        testData = 'data/%s/test.txt' % datasetName
         paths = [trainData, devData, testData]
 
-        logging.info(":: Transform "+datasetName+" dataset ::")
-        pklObjects['data'][datasetName] = createPklFiles(paths, mappings, datasetColumns, commentSymbol, valTransformations, padOneTokenSentence)
+        logging.info(":: Transform " + datasetName + " dataset ::")
+        pklObjects['data'][datasetName] = createPklFiles(paths, mappings, datasetColumns, commentSymbol,
+                                                         valTransformations, padOneTokenSentence)
 
-    
     f = open(outputPath, 'wb')
     pkl.dump(pklObjects, f, -1)
     f.close()
-    
+
     logging.info("DONE - Embeddings file saved: %s" % outputPath)
-    
+
     return outputPath
 
 
@@ -73,7 +78,6 @@ def loadDatasetPickle(embeddingsPickle):
     f.close()
 
     return pklObjects['embeddings'], pklObjects['mappings'], pklObjects['data']
-
 
 
 def readEmbeddings(embeddingsPath, datasetFiles, frequencyThresholdUnknownTokens, reducePretrainedEmbeddings):
@@ -88,7 +92,8 @@ def readEmbeddings(embeddingsPath, datasetFiles, frequencyThresholdUnknownTokens
     """
     # Check that the embeddings file exists
     if not os.path.isfile(embeddingsPath):
-        if embeddingsPath in ['komninos_english_embeddings.gz', 'levy_english_dependency_embeddings.gz', 'reimers_german_embeddings.gz']:
+        if embeddingsPath in ['komninos_english_embeddings.gz', 'levy_english_dependency_embeddings.gz',
+                              'reimers_german_embeddings.gz']:
             getEmbeddings(embeddingsPath)
         else:
             print("The embeddings file %s was not found" % embeddingsPath)
@@ -211,6 +216,7 @@ def addCharInformation(sentences):
             chars = [c for c in token]
             sentences[sentenceIdx]['characters'].append(chars)
 
+
 def addCasingInformation(sentences):
     """Adds information of the casing of words"""
     for sentenceIdx in range(len(sentences)):
@@ -219,107 +225,95 @@ def addCasingInformation(sentences):
             token = sentences[sentenceIdx]['tokens'][tokenIdx]
             sentences[sentenceIdx]['casing'].append(getCasing(token))
 
-def addIsNameInformation(sentences):
+
+def load_names(names_path, min_freq=1):
+    import pandas as pd
+    df_names = pd.read_csv(names_path)
+    if min_freq:
+        df_names = df_names[df_names["sum"] > min_freq]
+    names = df_names.prenom.dropna().values
+    freqs = df_names["sum"].dropna().values
+    dict_names = dict(zip(names, freqs))
+    return dict_names
+
+
+FR_NAMES_PATH = "./resources/names/names_last_names_FR.csv"
+
+
+def addIsNameInformation(sentences, keyword_processor=None):
     """Adds information on whether a word is included or not in word dictionary"""
+
+    if keyword_processor is None:
+        from flashtext import KeywordProcessor
+        keyword_processor = KeywordProcessor()
+        keyword_processor.add_keywords_from_list(list(load_names(FR_NAMES_PATH).keys()))
+
     for sentenceIdx in range(len(sentences)):
         sentences[sentenceIdx]['is_name'] = []
         for tokenIdx in range(len(sentences[sentenceIdx]['tokens'])):
             token = sentences[sentenceIdx]['tokens'][tokenIdx]
-            sentences[sentenceIdx]['is_name'].append(getCasing(token))
-       
+            sentences[sentenceIdx]['is_name'].append(getIsName(keyword_processor, token))
+
 
 def getIsName(keyword_processor, word):
     if keyword_processor.get_keyword(word):
-        return 1
+        return "1.0"  # In float string to be found on the info by the saved model THIS IS A HACK!
     else:
-        return 0
-
-
-def get_names_feature(corpus_df, min_char=3):
-    """
-    This feature receives a CoNLL corpus and adds a name column indicating if this
-    :return:
-    """
-    from flashtext import KeywordProcessor
-    import pandas as pd
-
-    def load_names(names_path, min_freq=1):
-        df_names = pd.read_csv(names_path)
-        if min_freq:
-            df_names = df_names[df_names["sum"] > min_freq]
-        names = df_names.prenom.dropna().values
-        freqs = df_names["sum"].dropna().values
-        dict_names = dict(zip(names, freqs))
-        return dict_names
-
-    NAMES_PATH = "./resources/names/names_last_names_FR.csv"
-    keyword_processor = KeywordProcessor()
-    keyword_processor.add_keywords_from_list(list(load_names(NAMES_PATH).keys()))
-    is_name = lambda token: 1 if keyword_processor.get_keyword(token) else 0
-
-    # corpus_df.dropna()["is_name"] = 0
-
-    corpus_df.loc[corpus_df.dropna().index, "is_name"] = 0
-    corpus_df.loc[corpus_df[0].str.len() > min_char, "is_name"] = corpus_df.loc[corpus_df[0].str.len() > min_char, 0].apply(is_name)
-    # corpus_df.is_name = corpus_df.is_name.replace(np.nan, '', regex=True)
-    # Put the tag column as the last col
-    corpus_df.loc[corpus_df.dropna().index, "is_name"] = pd.to_numeric(corpus_df.loc[corpus_df.dropna().index, "is_name"], downcast="integer")
-    corpus_df = corpus_df[[0, "is_name", 1]].replace(np.nan, '', regex=True)
-    # corpus_df.applymap(str)
-    return corpus_df
-
+        return "0.0"
 
 
 def getCasing(word):
     """Returns the casing for a word"""
     casing = 'other'
-    
+
     numDigits = 0
     for char in word:
         if char.isdigit():
             numDigits += 1
-            
+
     digitFraction = numDigits / float(len(word))
-    
-    if word.isdigit(): #Is a digit
+
+    if word.isdigit():  # Is a digit
         casing = 'numeric'
     elif digitFraction > 0.5:
         casing = 'mainly_numeric'
-    elif word.islower(): #All lower case
+    elif word.islower():  # All lower case
         casing = 'allLower'
-    elif word.isupper(): #All upper case
+    elif word.isupper():  # All upper case
         casing = 'allUpper'
-    elif word[0].isupper(): #is a title, initial char upper, then all lower
+    elif word[0].isupper():  # is a title, initial char upper, then all lower
         casing = 'initialUpper'
     elif numDigits > 0:
         casing = 'contains_digit'
-    
+
     return casing
 
+
 def getCasingVocab():
-    entries = ['PADDING', 'other', 'numeric', 'mainly_numeric', 'allLower', 'allUpper', 'initialUpper', 'contains_digit']
-    return {entries[idx]:idx for idx in range(len(entries))}
+    entries = ['PADDING', 'other', 'numeric', 'mainly_numeric', 'allLower', 'allUpper', 'initialUpper',
+               'contains_digit']
+    return {entries[idx]: idx for idx in range(len(entries))}
 
 
 def createMatrices(sentences, mappings, padOneTokenSentence):
     data = []
     numTokens = 0
-    numUnknownTokens = 0    
+    numUnknownTokens = 0
     missingTokens = FreqDist()
     paddedSentences = 0
 
     for sentence in sentences:
-        row = {name: [] for name in list(mappings.keys())+['raw_tokens']}
-        
-        for mapping, str2Idx in mappings.items():    
+        row = {name: [] for name in list(mappings.keys()) + ['raw_tokens']}
+
+        for mapping, str2Idx in mappings.items():
             if mapping not in sentence:
                 continue
-                    
-            for entry in sentence[mapping]:                
+
+            for entry in sentence[mapping]:
                 if mapping.lower() == 'tokens':
                     numTokens += 1
                     idx = str2Idx['UNKNOWN_TOKEN']
-                    
+
                     if entry in str2Idx:
                         idx = str2Idx[entry]
                     elif entry.lower() in str2Idx:
@@ -327,23 +321,23 @@ def createMatrices(sentences, mappings, padOneTokenSentence):
                     elif wordNormalize(entry) in str2Idx:
                         idx = str2Idx[wordNormalize(entry)]
                     else:
-                        numUnknownTokens += 1    
+                        numUnknownTokens += 1
                         missingTokens[wordNormalize(entry)] += 1
-                        
+
                     row['raw_tokens'].append(entry)
-                elif mapping.lower() == 'characters':  
+                elif mapping.lower() == 'characters':
                     idx = []
                     for c in entry:
                         if c in str2Idx:
                             idx.append(str2Idx[c])
                         else:
-                            idx.append(str2Idx['UNKNOWN'])                           
-                                      
+                            idx.append(str2Idx['UNKNOWN'])
+
                 else:
                     idx = str2Idx[entry]
-                                    
+
                 row[mapping].append(idx)
-                
+
         if len(row['tokens']) == 1 and padOneTokenSentence:
             paddedSentences += 1
             for mapping, str2Idx in mappings.items():
@@ -354,37 +348,34 @@ def createMatrices(sentences, mappings, padOneTokenSentence):
                     row['characters'].append([0])
                 else:
                     row[mapping].append(0)
-            
+
         data.append(row)
-    
-    if numTokens > 0:           
-        logging.info("Unknown-Tokens: %.2f%%" % (numUnknownTokens/float(numTokens)*100))
-        
+
+    if numTokens > 0:
+        logging.info("Unknown-Tokens: %.2f%%" % (numUnknownTokens / float(numTokens) * 100))
+
     return data
-    
-  
-  
+
+
 def createPklFiles(datasetFiles, mappings, cols, commentSymbol, valTransformation, padOneTokenSentence):
     trainSentences = readCoNLL(datasetFiles[0], cols, commentSymbol, valTransformation)
     devSentences = readCoNLL(datasetFiles[1], cols, commentSymbol, valTransformation)
-    testSentences = readCoNLL(datasetFiles[2], cols, commentSymbol, valTransformation)    
-   
-    extendMappings(mappings, trainSentences+devSentences+testSentences)
+    testSentences = readCoNLL(datasetFiles[2], cols, commentSymbol, valTransformation)
 
-                
-    
-    charset = {"PADDING":0, "UNKNOWN":1}
+    extendMappings(mappings, trainSentences + devSentences + testSentences)
+
+    charset = {"PADDING": 0, "UNKNOWN": 1}
     for c in " 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,-_()[]{}!?:;#'\"/\\%$`&=*+@^~|":
         charset[c] = len(charset)
     mappings['characters'] = charset
-    
+
     addCharInformation(trainSentences)
     addCasingInformation(trainSentences)
-    
+
     addCharInformation(devSentences)
     addCasingInformation(devSentences)
-    
-    addCharInformation(testSentences)   
+
+    addCharInformation(testSentences)
     addCasingInformation(testSentences)
 
     logging.info(":: Create Train Matrix ::")
@@ -396,50 +387,46 @@ def createPklFiles(datasetFiles, mappings, cols, commentSymbol, valTransformatio
     logging.info(":: Create Test Matrix ::")
     testMatrix = createMatrices(testSentences, mappings, padOneTokenSentence)
 
-    
     data = {
-                'trainMatrix': trainMatrix,
-                'devMatrix': devMatrix,
-                'testMatrix': testMatrix
-            }        
-       
-    
+        'trainMatrix': trainMatrix,
+        'devMatrix': devMatrix,
+        'testMatrix': testMatrix
+    }
+
     return data
+
 
 def extendMappings(mappings, sentences):
     sentenceKeys = list(sentences[0].keys())
-    sentenceKeys.remove('tokens') #No need to map tokens
+    sentenceKeys.remove('tokens')  # No need to map tokens
 
     for sentence in sentences:
         for name in sentenceKeys:
             if name not in mappings:
-                mappings[name] = {'O':0} #'O' is also used for padding
+                mappings[name] = {'O': 0}  # 'O' is also used for padding
 
-            for item in sentence[name]:              
+            for item in sentence[name]:
                 if item not in mappings[name]:
                     mappings[name][item] = len(mappings[name])
 
 
-
-    
-
 def getEmbeddings(name):
     if not os.path.isfile(name):
-        download("https://public.ukp.informatik.tu-darmstadt.de/reimers/embeddings/"+name)
-
+        download("https://public.ukp.informatik.tu-darmstadt.de/reimers/embeddings/" + name)
 
 
 def getLevyDependencyEmbeddings():
     """
     Downloads from https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
     the dependency based word embeddings and unzips them    
-    """ 
+    """
     if not os.path.isfile("levy_deps.words.bz2"):
         print("Start downloading word embeddings from Levy et al. ...")
         os.system("wget -O levy_deps.words.bz2 http://u.cs.biu.ac.il/~yogo/data/syntemb/deps.words.bz2")
-    
+
     print("Start unzip word embeddings ...")
     os.system("bzip2 -d levy_deps.words.bz2")
+
 
 def getReimersEmbeddings():
     """
@@ -448,9 +435,9 @@ def getReimersEmbeddings():
     """
     if not os.path.isfile("2014_tudarmstadt_german_50mincount.vocab.gz"):
         print("Start downloading word embeddings from Reimers et al. ...")
-        os.system("wget https://public.ukp.informatik.tu-darmstadt.de/reimers/2014_german_embeddings/2014_tudarmstadt_german_50mincount.vocab.gz")
-    
-   
+        os.system(
+            "wget https://public.ukp.informatik.tu-darmstadt.de/reimers/2014_german_embeddings/2014_tudarmstadt_german_50mincount.vocab.gz")
+
 
 if sys.version_info >= (3,):
     import urllib.request as urllib2
