@@ -23,7 +23,6 @@ with open(inputPath, 'r') as f:
 # :: Load the model ::
 lstmModel = BiLSTM.loadModel(modelPath)
 
-
 # :: Prepare the input ::
 sentences = [{'tokens': nltk.word_tokenize(sent)} for sent in nltk.sent_tokenize(text)]
 addCharInformation(sentences)

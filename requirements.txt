@@ -1,3 +1,6 @@
+flask
+sacremoses
+sentence_splitter
 flashtext
 pandas
 absl-py==0.2.2
