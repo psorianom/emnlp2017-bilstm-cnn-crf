@@ -1,5 +1,5 @@
-# THIS IS A FORK!
-This is a fork of the original https://github.com/UKPLab/emnlp2017-bilstm-cnn-crf repository. It has a training file (`Train_Justice.py`) used to fit a NER model, which is lated used here https://github.com/etalab/pseudononymizer/ to pseudonymize French justice decisions. The 
+## THIS IS A FORK!
+This is a fork of the original https://github.com/UKPLab/emnlp2017-bilstm-cnn-crf repository. It has a training file (`Train_Justice.py`) used to fit a NER model, which is lated used here https://github.com/etalab/pseudononymizer/ to pseudonymize French justice decisions. It also include sample data within `./data/model_public` which can be used to train your own model and use it with the REST API linked above.
 
 The rest of the code is the same as that of the original repo, still some differences exists after playing with the code during our experiments. These differences are :
 1. It includes a flag to control the recalculation or not of the initial word embeddings
@@ -9,6 +9,7 @@ The rest of the code is the same as that of the original repo, still some differ
 
 
 
+## ----- END OF FORK DESCRIPTION ------
 
 
 
