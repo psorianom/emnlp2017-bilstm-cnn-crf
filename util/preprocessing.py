@@ -21,7 +21,7 @@ else:  # Python 2.7 imports
 
 
 def perpareDataset(embeddingsPath, datasets, frequencyThresholdUnknownTokens=50, reducePretrainedEmbeddings=False,
-                   valTransformations=None, padOneTokenSentence=True):
+                   valTransformations=None, padOneTokenSentence=True, useExistent=True):
     """
     Reads in the pre-trained embeddings (in text format) from embeddingsPath and prepares those to be used with the LSTM network.
     Unknown words in the trainDataPath-file are added, if they appear at least frequencyThresholdUnknownTokens times
@@ -38,7 +38,7 @@ def perpareDataset(embeddingsPath, datasets, frequencyThresholdUnknownTokens=50,
     pklName = "_".join(sorted(datasets.keys()) + [embeddingsName])
     outputPath = 'pkl/' + pklName + '.pkl'
 
-    if os.path.isfile(outputPath):
+    if os.path.isfile(outputPath) and useExistent:
         logging.info("Using existent pickle file: %s" % outputPath)
         return outputPath
 
@@ -357,6 +357,12 @@ def createMatrices(sentences, mappings, padOneTokenSentence):
     return data
 
 
+def randomizeSequences(sequences_list):
+    import random
+    random.shuffle(sequences_list)
+    return sequences_list
+
+
 def createPklFiles(datasetFiles, mappings, cols, commentSymbol, valTransformation, padOneTokenSentence):
     trainSentences = readCoNLL(datasetFiles[0], cols, commentSymbol, valTransformation)
     devSentences = readCoNLL(datasetFiles[1], cols, commentSymbol, valTransformation)
@@ -371,12 +377,15 @@ def createPklFiles(datasetFiles, mappings, cols, commentSymbol, valTransformatio
 
     addCharInformation(trainSentences)
     addCasingInformation(trainSentences)
+    # addIsNameInformation(trainSentences)
 
     addCharInformation(devSentences)
     addCasingInformation(devSentences)
+    # addIsNameInformation(devSentences)
 
     addCharInformation(testSentences)
     addCasingInformation(testSentences)
+    # addIsNameInformation(testSentences)
 
     logging.info(":: Create Train Matrix ::")
     trainMatrix = createMatrices(trainSentences, mappings, padOneTokenSentence)

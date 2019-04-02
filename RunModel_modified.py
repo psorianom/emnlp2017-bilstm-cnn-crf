@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # This scripts loads a pretrained model and a raw .txt files. It then performs sentence splitting and tokenization and passes
 # the input sentences to the model for tagging. Prints the tokens and the tags in a CoNLL format to stdout
+
+# It uses a particular tokenization scheme in line with the tokenization used to generate the training files (moses)
+
 # Usage: python RunModel_modified.py modelPath inputPath
 # For pretrained models see docs/Pretrained_Models.md
 from __future__ import print_function

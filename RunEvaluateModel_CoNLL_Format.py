@@ -52,5 +52,21 @@ for sentenceIdx in range(len(sentences)):
     all_sentences_preds.append(" ")
     print("")
 
-# from util.conlleval import evaluate, report
-# report(evaluate(all_sentences_preds))
+from util.conlleval import evaluate, report
+report(evaluate(all_sentences_preds))
+
+
+y_trues = [f.split()[1] for f in all_sentences_preds if f.lstrip()]
+y_preds = [f.split()[2] for f in all_sentences_preds if f.lstrip()]
+
+y_trues = [f.split("-")[1] if f != "O" else f for f in y_trues]
+y_preds = [f.split("-")[1] if f != "O" else f for f in y_preds]
+
+from sklearn.metrics import confusion_matrix
+#print(confusion_matrix(y_trues, y_preds, ["B-AUX", "I-AUX", "B-DATE", "I-DATE", "B-LOC", "I-LOC", "B-PER", "I-PER", "O"]))
+
+df_cm = confusion_matrix(y_trues, y_preds, ["AUX", "DATE", "LOC", "PER", "O"])
+
+import pandas as pd
+df_cm = pd.DataFrame(df_cm, index=["V_AUX", "V_DATE", "V_LOC", "V_PER", "V_O"], columns=["P_AUX", "P_DATE", "P_LOC", "P_PER", "P_O"])
+print(df_cm)

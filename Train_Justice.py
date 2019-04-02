@@ -31,22 +31,23 @@ logger.addHandler(ch)
 ######################################################
 #
 # Data preprocessing
-#       
+#
 ######################################################
 datasets = {
-    'jurica_enriched':                                   #Name of the dataset
-         # {'columns': {0:'tokens', 1:'NER_BIO'},
-         {'columns': {0:'tokens', 1:"is_name", 2:'NER_BIO'},   #CoNLL format for the input data. Column 0 contains tokens, column 1 contains POS and column 2 contains chunk information using BIO encoding
+    'model_public':                                   #Name of the dataset
+         {'columns': {0:'tokens', 1:'NER_BIO'},
+         # {'columns': {0:'tokens', 1:"is_name",  2:'NER_BIO'},   #CoNLL format for the input data. Column 0 contains tokens, column 1 contains POS and column 2 contains chunk information using BIO encoding
          'label': 'NER_BIO',                              #Which column we like to predict
          'evaluate': True,                                  #Should we evaluate on this task? Set true always for single task setups
-         'commentSymbol': None}                             #Lines in the input data starting with this string will be skipped. Can be used to skip comments
+         'commentSymbol': None,
+         }
 }
 
 # :: Path on your computer to the word embeddings. Embeddings by Komninos et al. will be downloaded automatically ::
 embeddingsPath = 'jurinet_parsed_100.vec.gz'
 
 # :: Prepares the dataset to be used with the LSTM-network. Creates and stores cPickle files in the pkl/ folder ::
-pickleFile = perpareDataset(embeddingsPath, datasets)
+pickleFile = perpareDataset(embeddingsPath, datasets, useExistent=False)
 
 
 ######################################################
@@ -61,15 +62,15 @@ embeddings, mappings, data = loadDatasetPickle(pickleFile)
 
 # Some network hyperparameters
 params = {'classifier': ['CRF'], 'LSTM-Size': [100, 100], 'dropout': (0.5, 0.5), 'charEmbeddings':'LSTM',
-          'optimizer': 'adam', 'featureNames': ['tokens', "casing"]}
+          'optimizer': 'adam', 'featureNames': ['tokens', 'casing']}
 
 
-model = BiLSTM(params)
-model.setMappings(mappings, embeddings)
-model.setDataset(datasets, data)
-model.storeResults('results/Jurica_NER.csv') #Path to store performance scores for dev / test
-model.modelSavePath = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5"
-model.fit(epochs=100)
+MODEL = BiLSTM(params)
+MODEL.setMappings(mappings, embeddings)
+MODEL.setDataset(datasets, data)
+MODEL.storeResults('results/Jurica_NER.csv') #Path to store performance scores for dev / test
+MODEL.modelSavePath = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5"
+MODEL.fit(epochs=100)
 
 
 
