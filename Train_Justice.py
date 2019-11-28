@@ -44,7 +44,7 @@ datasets = {
 }
 
 # :: Path on your computer to the word embeddings. Embeddings by Komninos et al. will be downloaded automatically ::
-embeddingsPath = 'jurinet_parsed_100.vec.gz'
+embeddingsPath = '/home/pavel/code/conseil_detat/anonymisation_software/train/embeddings.vec'
 
 # :: Prepares the dataset to be used with the LSTM-network. Creates and stores cPickle files in the pkl/ folder ::
 pickleFile = perpareDataset(embeddingsPath, datasets, useExistent=False)
