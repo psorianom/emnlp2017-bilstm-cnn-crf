@@ -1,3 +1,18 @@
+## THIS IS A FORK!
+This is a fork of the original https://github.com/UKPLab/emnlp2017-bilstm-cnn-crf repository. It has a training file (`Train_Justice.py`) used to fit a NER model, which is later used here https://github.com/etalab/pseudononymizer/ to pseudonymize French justice decisions. It also include sample data within `./data/model_public` which can be used to train your own model and use it with the REST API linked above.
+
+The rest of the code is the same as that of the original repo, still some differences exists after playing with the code during our experiments. These differences are :
+1. It includes a flag to control the recalculation or not of the initial word embeddings
+2. Possibility to randomize the input dataset
+3. Added a function to save the actual predictions after each iteration
+
+
+
+
+## ----- END OF FORK DESCRIPTION ------
+
+
+
 # BiLSTM-CNN-CRF Implementation for Sequence Tagging
 
 This repository contains a BiLSTM-CRF implementation that used for NLP Sequence Tagging (for example POS-tagging, Chunking, or Named Entity Recognition). The implementation is based on Keras 2.2.0 and can be run with Tensorflow 1.8.0 as backend. It was optimized for Python 3.5 / 3.6. It does **not work** with Python 2.7.
