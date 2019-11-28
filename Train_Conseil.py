@@ -34,7 +34,7 @@ logger.addHandler(ch)
 #
 ######################################################
 datasets = {
-    'model_conseil_doctrine':                                   #Name of the dataset
+    'conseil_etat':                                   #Name of the dataset
          {'columns': {0:'tokens', 1:'NER_BIO'},
          # {'columns': {0:'tokens', 1:"is_name",  2:'NER_BIO'},   #CoNLL format for the input data. Column 0 contains tokens, column 1 contains POS and column 2 contains chunk information using BIO encoding
          'label': 'NER_BIO',                              #Which column we like to predict
@@ -44,7 +44,6 @@ datasets = {
 }
 
 # :: Path on your computer to the word embeddings. Embeddings by Komninos et al. will be downloaded automatically ::
-embeddingsPath = '/home/pavel/code/conseil_detat/anonymisation_software/train/embeddings.vec'
 embeddingsPath = 'jurinet_parsed_100.vec.gz'
 # embeddingsPath =  'embeddings.vec'
 
@@ -70,7 +69,7 @@ params = {'classifier': ['CRF'], 'LSTM-Size': [100, 100], 'dropout': (0.5, 0.5),
 MODEL = BiLSTM(params)
 MODEL.setMappings(mappings, embeddings)
 MODEL.setDataset(datasets, data)
-MODEL.storeResults('results/Jurica_NER.csv') #Path to store performance scores for dev / test
+MODEL.storeResults('results/Conseil_NER.csv') #Path to store performance scores for dev / test
 MODEL.modelSavePath = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5"
 MODEL.fit(epochs=100)
 
