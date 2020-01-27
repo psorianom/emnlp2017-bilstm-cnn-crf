@@ -24,11 +24,11 @@ modelPath = sys.argv[1]
 inputPath = sys.argv[2]
 
 # 1 create text file
-subprocess.check_call(["python", "/home/pavel/etalab/code/conseil_etat/src/data/doc2txt.py", inputPath])
+subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/doc2txt.py", inputPath])
 decision_txt_path = inputPath[:-3] + "txt"
 
 # 2 file to conll file
-subprocess.check_call(["python", "/home/pavel/etalab/code/conseil_etat/src/data/normal_doc2conll.py", decision_txt_path])
+subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/normal_doc2conll.py", decision_txt_path])
 
 
 decision_conll_path = decision_txt_path[:-4] + "_CoNLL.txt"
