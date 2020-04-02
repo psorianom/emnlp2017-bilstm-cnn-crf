@@ -5,6 +5,7 @@
 # For pretrained models see docs/
 from __future__ import print_function
 
+import glob
 import subprocess
 
 from util.preprocessing import readCoNLL, createMatrices, addCharInformation, addCasingInformation
@@ -12,7 +13,7 @@ from neuralnets.BiLSTM import BiLSTM
 import sys
 import logging
 
-
+import time
 
 if len(sys.argv) < 3:
     print("Usage: python RunModel_CoNLL_Format.py modelPath inputPath")
@@ -23,71 +24,80 @@ if len(sys.argv) < 3:
 modelPath = sys.argv[1]
 inputPath = sys.argv[2]
 
-# 1 create text file
-subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/doc2txt.py", inputPath])
-decision_txt_path = inputPath[:-3] + "txt"
-
-# 2 file to conll file
-subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/normal_doc2conll.py", decision_txt_path])
-
-
-decision_conll_path = decision_txt_path[:-4] + "_CoNLL.txt"
-
-#3 predict conll file
-
-
-
-inputColumns = {0: "tokens"}
-
-
-# :: Prepare the input ::
-sentences = readCoNLL(decision_conll_path, inputColumns)
-addCharInformation(sentences)
-addCasingInformation(sentences)
-
+list_files = glob.glob(inputPath + "/**/*.doc", recursive=True)[:50]
 
 # :: Load the model ::
 lstmModel = BiLSTM.loadModel(modelPath)
 
+print(inputPath + "**/*.doc")
+print(list_files)
+for decision in list_files:
+    try:
+        # 1 create text file
+        subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/doc2txt.py", decision])
+        decision_txt_path = decision[:-3] + "txt"
 
-dataMatrix = createMatrices(sentences, lstmModel.mappings, True)
-
-# :: Tag the input ::
-tags = lstmModel.tagSentences(dataMatrix)
+        # 2 file to conll file
+        subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/normal_doc2conll.py", decision_txt_path])
 
 
-# :: Output to stdout ::
-list_token_tags = []
-for sentenceIdx in range(len(sentences)):
-    tokens = sentences[sentenceIdx]['tokens']
-    sentence = []
-    for tokenIdx in range(len(tokens)):
+        decision_conll_path = decision_txt_path[:-4] + "_CoNLL.txt"
 
-        tokenTags = []
-        for modelName in sorted(tags.keys()):
-            tokenTags.append(tags[modelName][sentenceIdx][tokenIdx])
-        sentence.append((tokens[tokenIdx], tokenTags[0]))
-        print("%s\t%s" % (tokens[tokenIdx], "\t".join(tokenTags)))
-    print("")
-    list_token_tags.append(sentence)
+        #3 predict conll file
 
-# print(list_token_tags)
 
-anon_list_token_tags = []
-for sent in list_token_tags:
-    sentence = []
-    for token, tag in sent:
-        new_token = "..." if tag != "O" else token
-        sentence.append((new_token, tag))
-    anon_list_token_tags.append(sentence)
-# print(anon_list_token_tags)
 
-annon_file_path = decision_conll_path[:-10] + "_annon.txt"
+        inputColumns = {0: "tokens"}
 
-with open(annon_file_path, "w") as filo:
-    for sent in anon_list_token_tags:
-        tokens = [t[0] for t in sent]
-        filo.write(" ".join(tokens) + "\n")
-        # print(tokens)
-        # print()
-        filo.write("\n")
+
+        # :: Prepare the input ::
+        sentences = readCoNLL(decision_conll_path, inputColumns)
+        addCharInformation(sentences)
+        addCasingInformation(sentences)
+
+
+
+
+        dataMatrix = createMatrices(sentences, lstmModel.mappings, True)
+
+        # :: Tag the input ::
+        tags = lstmModel.tagSentences(dataMatrix)
+
+
+        # :: Output to stdout ::
+        list_token_tags = []
+        for sentenceIdx in range(len(sentences)):
+            tokens = sentences[sentenceIdx]['tokens']
+            sentence = []
+            for tokenIdx in range(len(tokens)):
+
+                tokenTags = []
+                for modelName in sorted(tags.keys()):
+                    tokenTags.append(tags[modelName][sentenceIdx][tokenIdx])
+                sentence.append((tokens[tokenIdx], tokenTags[0]))
+                print("%s\t%s" % (tokens[tokenIdx], "\t".join(tokenTags)))
+            print("")
+            list_token_tags.append(sentence)
+
+        # print(list_token_tags)
+
+        anon_list_token_tags = []
+        for sent in list_token_tags:
+            sentence = []
+            for token, tag in sent:
+                new_token = "..." if tag != "O" else token
+                sentence.append((new_token, tag))
+            anon_list_token_tags.append(sentence)
+        # print(anon_list_token_tags)
+
+        annon_file_path = decision_conll_path[:-10] + "_annon.txt"
+
+        with open(annon_file_path, "w") as filo:
+            for sent in anon_list_token_tags:
+                tokens = [t[0] for t in sent]
+                filo.write(" ".join(tokens) + "\n")
+                # print(tokens)
+                # print()
+                filo.write("\n")
+    except:
+        pass
