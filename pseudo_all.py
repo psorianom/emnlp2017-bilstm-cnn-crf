@@ -12,7 +12,7 @@ from util.preprocessing import readCoNLL, createMatrices, addCharInformation, ad
 from neuralnets.BiLSTM import BiLSTM
 import sys
 import logging
-
+from random import shuffle
 import time
 
 if len(sys.argv) < 3:
@@ -23,25 +23,25 @@ if len(sys.argv) < 3:
 
 modelPath = sys.argv[1]
 inputPath = sys.argv[2]
+list_files = list(glob.glob(inputPath + "/**/*.txt", recursive=True))[:50]
 
-list_files = glob.glob(inputPath + "/**/*.doc", recursive=True)[:50]
+
 
 # :: Load the model ::
 lstmModel = BiLSTM.loadModel(modelPath)
 
-print(inputPath + "**/*.doc")
 print(list_files)
 for decision in list_files:
     try:
         # 1 create text file
-        subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/doc2txt.py", decision])
-        decision_txt_path = decision[:-3] + "txt"
-
+        # subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/doc2txt.py", decision])
+        # decision_txt_path = decision[:-3] + "txt"
+        decision_txt_path = decision
         # 2 file to conll file
-        subprocess.check_call(["python", "/home/pavel/code/conseil_detat/src/data/normal_doc2conll.py", decision_txt_path])
+        subprocess.check_call(["python", "/home/pavel/code/pseudo_conseil_etat/src/data/normal_doc2conll.py", decision_txt_path])
 
 
-        decision_conll_path = decision_txt_path[:-4] + "_CoNLL.txt"
+        decision_conll_path = decision_txt_path[:-4] + "_TestCoNLL.txt"
 
         #3 predict conll file
 
@@ -75,8 +75,8 @@ for decision in list_files:
                 for modelName in sorted(tags.keys()):
                     tokenTags.append(tags[modelName][sentenceIdx][tokenIdx])
                 sentence.append((tokens[tokenIdx], tokenTags[0]))
-                print("%s\t%s" % (tokens[tokenIdx], "\t".join(tokenTags)))
-            print("")
+                # print("%s\t%s" % (tokens[tokenIdx], "\t".join(tokenTags)))
+            # print("")
             list_token_tags.append(sentence)
 
         # print(list_token_tags)
@@ -89,7 +89,9 @@ for decision in list_files:
                 sentence.append((new_token, tag))
             anon_list_token_tags.append(sentence)
         # print(anon_list_token_tags)
-
+        if not anon_list_token_tags:
+            print(f"File {decision} did not have annotated tokens")
+            continue
         annon_file_path = decision_conll_path[:-10] + "_annon.txt"
 
         with open(annon_file_path, "w") as filo:
